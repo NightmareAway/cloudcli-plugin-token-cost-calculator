@@ -6,6 +6,8 @@
 
 Token Cost Calculator 是一个 CloudCLI 标签页插件，直接读取 Claude Code 存在本地的会话 JSONL 转录文件（路径：`~/.claude/projects/`），把原始 token 数量换算成真金白银。主对话、子代理会话、prompt 缓存命中、推理模型的思考 token —— 全都覆盖。还支持按天、按项目、全历史三种维度查看明细，全程不需要手动输入任何东西。
 
+<img width="1468" height="909" alt="image" src="https://github.com/user-attachments/assets/aa33e4b6-d2cf-4f7d-b1d6-a7e476979596" />
+
 ---
 
 ## 这个插件到底能干啥（说人话版）
