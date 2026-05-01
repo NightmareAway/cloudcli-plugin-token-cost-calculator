@@ -1,99 +1,108 @@
 # Token Cost Calculator（Token 费用计算器）
 
-一个 [CloudCLI](https://cloudcli.ai) 插件，用于通过五种模式计算 API Token 费用——手动输入、单会话自动检测、项目汇总、全局总计和每日明细。内置 8 种模型预设定价（Anthropic、OpenAI、Google、DeepSeek），同时支持自定义价格。
+**在收到账单之前，先搞清楚你到底花了多少钱。**
 
-## 功能特性
+你正在用 Claude Code 埋头写代码，连续肝了几个小时，突然心里一紧：*"今天我到底花了多少 API 费用？"* 不用登录 Anthropic / OpenAI / DeepSeek 的账单后台翻来翻去，打开这个插件，一眼就看到了：**今天 ￥17.12，本月 ￥133.85，从安装到现在一共 ￥1,042.90。**
 
-- **5 种计算模式：**
-  - **Manual（手动）** — 手动输入 token 数量，支持快捷添加按钮
-  - **Auto-detect（自动检测）** — 从当前 Claude 会话的 JSONL 转录文件中读取 token 使用量
-  - **Project（项目）** — 汇总单个项目文件夹下所有会话的 token 使用量，含逐会话明细
-  - **All-time（全局）** — 统计自安装以来的所有项目全部会话，含逐项目彩色进度条
-  - **Daily（每日）** — 按天统计 token 使用量和费用，支持日期切换（默认显示当天）
-- **预设定价**，覆盖 8 款模型：Claude Opus 4.7、Sonnet 4.6、Haiku 4.5、GPT-4o、GPT-4o-mini、Gemini 2.5 Pro/Flash、DeepSeek V4 Pro
-- **自定义价格** — 可输入任意 input / output / cached input 的每百万 token 价格（美元）
-- **自动检测**会话 token 用量，读取 `~/.claude/projects/*.jsonl` 转录文件（含子代理会话）
-- **深色 / 浅色主题**支持，跟随 CloudCLI 宿主主题
-- **状态持久化** — 模式、价格和手动 token 数量保存到 localStorage
-- **去重处理** — 正确处理推理模型（如 DeepSeek）的多块 API 响应（thinking + text + tool_use）
+Token Cost Calculator 是一个 CloudCLI 标签页插件，直接读取 Claude Code 存在本地的会话 JSONL 转录文件（路径：`~/.claude/projects/`），把原始 token 数量换算成真金白银。主对话、子代理会话、prompt 缓存命中、推理模型的思考 token —— 全都覆盖。还支持按天、按项目、全历史三种维度查看明细，全程不需要手动输入任何东西。
 
-## 安装
+---
+
+## 这个插件到底能干啥（说人话版）
+
+- **自动读取真实用量。** 不用去账单页复制粘贴。插件自动扫描 Claude Code 存在你硬盘上的 JSONL 会话文件，提取 `input_tokens`、`output_tokens`、`cache_read_input_tokens`、`cache_creation_input_tokens`，乘以你设的价格，算出花了多少钱。
+- **五种角度看数据。** Manual（手动模式）适合快速估算；Auto-detect（自动检测）看当前会话；Project（项目模式）回答"这个仓库总共花了多少"；All-time（全局模式）看从安装到现在的总账；Daily（每日模式）带日期选择器，默认显示今天，可以翻到"上周二花了多少"。
+- **内置模型价格表。** Claude Opus 4.7、Sonnet 4.6、Haiku 4.5、GPT-4o、GPT-4o-mini、Gemini 2.5 Pro/Flash、DeepSeek V4 Pro —— 下拉菜单直接选，也支持自己填每百万 token 的自定义价格。
+- **处理坑爹的边界情况。** DeepSeek 这类推理模型，一个 API 调用会产出一串内容块（思考 → 正文 → 工具调用），每个块在 JSONL 里单独占一行，但 `message.usage` 是完全相同的。插件靠 `message.id` 去重，不会把同一轮对话的 token 数翻 3 倍。子代理会话（Claude Code 的 Task 工具调用的）也会一并统计。
+
+---
+
+## 三步安装，零配置
+
+### 第一步 —— 克隆到插件目录
 
 ```bash
 cd ~/.claude-code-ui/plugins
-git clone https://github.com/YOUR_USERNAME/cloudcli-plugin-token-cost-calculator.git token-cost-calculator
+git clone https://github.com/NightmareAway/cloudcli-plugin-token-cost-calculator.git token-cost-calculator
+```
+
+### 第二步 —— 安装依赖并编译
+
+```bash
 cd token-cost-calculator
 npm install
 npm run build
 ```
 
-然后重启 CloudCLI 或刷新插件面板。
+### 第三步 —— 重启 CloudCLI
 
-## 使用方法
+关掉再打开 CloudCLI（或者重载插件面板），**Token Cost Calculator** 标签页就出现了。
 
-1. 打开 CloudCLI，切换到 **Token Cost Calculator** 标签页。
-2. 从 **Model Preset** 下拉菜单选择模型，或输入自定义价格。
-3. 选择一种 **Mode（模式）**：
+没有 API Key，没有 `.env` 配置文件，什么都不用填。插件读的就是 Claude Code 本来就在你电脑上存着的东西。
 
-| 模式 | 说明 |
-|---|---|
-| Manual | 手动输入 token 数量。使用 **Quick Add** 按钮（+1K、+10K、+100K、+1M、+10M）快速输入。 |
-| Auto-detect | 从当前会话读取 token。若无活跃会话，可手动输入项目路径和会话 ID。 |
-| Project | 汇总单个项目下所有会话。输入项目路径后点击 **Fetch**。 |
-| All-time | 统计所有项目的全部会话。以彩色进度条展示逐项目明细。 |
-| Daily | 按天分组统计。使用 ◀/▶ 按钮切换日期，或点击明细列表中的任意日期。默认显示当天。 |
+---
 
-4. 查看 **Cost Breakdown** 区域，了解 input、output、cached-input 及总费用。
+## 五种模式一览
 
-## 工作原理
+| 模式 | 适合场景 | 你能看到什么 |
+|---|---|---|
+| **Manual**（手动） | 快速估算、假设"如果我用 XX 模型" | 自己填 token 数，有 +1K / +10K / +100K / +1M / +10M 快捷按钮 |
+| **Auto-detect**（自动检测） | 正在进行的会话 | 实时读取当前 JSONL 转录文件，含所有轮次和子代理 |
+| **Project**（项目） | "这个仓库总共烧了多少钱？" | 该项目文件夹下所有会话汇总，逐条列出 session ID 和模型 |
+| **All-time**（全局） | "从装 Claude Code 到现在一共花了多少？" | 所有项目汇总，彩色进度条，一个项目一根条 |
+| **Daily**（每日） | "今天就花了多少？" 或 "上周三呢？" | 日期导航器（◀ ▶ 按钮），默认当天，点列表中任意日期即可切换 |
 
-插件后端读取 Claude Code 存储在 `~/.claude/projects/<encoded-project-path>/<session-id>.jsonl` 的会话转录文件。每条 `"type": "assistant"` 的 JSONL 行包含 `message.usage` 对象，内含 token 计数：
+所有模式共用同一套价格面板和底部的费用明细。切模式不会丢价格设置。
 
-- `input_tokens` — 提示 token，按 input 价格计费
-- `output_tokens` — 输出 token，按 output 价格计费
-- `cache_creation_input_tokens` + `cache_read_input_tokens` — 缓存 token，按缓存价格计费
-- `timestamp` — 用于按天汇总
+---
 
-子代理会话（来自 `Task` 工具调用）也会扫描 `<session-id>/subagents/*.jsonl` 目录。
+## 涉及的技术关键词（方便搜索到这儿）
+
+插件内部干了很多脏活累活，下面这些词可能刚好是你搜索时用到的：
+
+- **Claude Code 插件 / CloudCLI 插件** — 基于 CloudCLI 插件架构开发（`manifest.json` + `mount`/`unmount` 生命周期）。后端是 Node.js HTTP 子进程。
+- **大模型 token 费用计算 / API 花费追踪** — 用 `input_tokens` / `output_tokens` / `cache_read_input_tokens` 乘以每百万 token 单价。支持 Anthropic Claude、OpenAI GPT、Google Gemini、DeepSeek 的定价。
+- **Prompt 缓存计费** — 单独统计 `cache_creation_input_tokens` 和 `cache_read_input_tokens`，按较低的缓存价格算。长对话里缓存往往是隐藏的费用大头。
+- **JSONL 会话转录解析** — 用 Node.js `readline` 逐行读取 `~/.claude/projects/<编码后的路径>/<session-uuid>.jsonl`，筛选 `"type": "assistant"` 的条目，提取 `message.usage`。
+- **Message ID 去重** — 推理模型（DeepSeek V4 Pro 等）一个 API 调用产生多行 assistant 记录（thinking + text + tool_use），每行的 `usage` 一模一样。插件用 `Set<string>` 记录 `message.id`，跳过重复行，避免翻倍计算。
+- **子代理 / 工具调用会话** — Claude Code 的 Task 工具会启动子代理，转录文件存在 `<session-dir>/subagents/*.jsonl`。插件递归扫描并计入总数。
+- **Windows 路径编码** — Claude Code 把 `C:\Users\...` 编码为 `C--Users-...`（`\` `:` 空格 `_` 全替换成 `-`）。插件做了路径标准化和反向映射。
+- **按天汇总 Token** — 用 JSONL 中的 `timestamp` 字段（ISO 8601 格式）提取 `YYYY-MM-DD`，按天归并。前端日期导航器支持前后翻页和一键回今天。
+- **localStorage 状态持久化** — 当前模式、自定义价格、手动输入的 token 数，刷新页面不会丢。
+
+---
 
 ## 项目结构
 
 ```
 token-cost-calculator/
-├── manifest.json        # 插件元数据（CloudCLI）
+├── manifest.json        # CloudCLI 插件元数据（slot: tab）
 ├── package.json
 ├── tsconfig.json
 ├── icon.svg
 └── src/
-    ├── index.ts         # 前端入口 — UI 渲染、事件处理、RPC 调用
-    ├── server.ts        # 后端服务 — HTTP API、JSONL 解析、token 汇总
-    └── types.ts         # 插件 API 类型定义
+    ├── index.ts         # 前端：5 种模式 UI、日期导航器、深色/浅色主题
+    ├── server.ts        # 后端：HTTP API、JSONL 读取、token 汇总
+    └── types.ts         # PluginContext / PluginAPI / PluginModule 类型定义
 ```
 
-## API 接口
+## 后端 API 接口
 
-| 接口 | 说明 |
+| 接口 | 返回内容 |
 |---|---|
-| `GET /presets` | 返回内置模型预设价格 |
-| `GET /session-usage?projectPath=...&sessionId=...` | 单个会话的 token 用量 |
-| `POST /calculate` | 服务端费用计算 |
-| `GET /project-usage?projectPath=...` | 某项目下全部会话的汇总用量 |
-| `GET /all-usage` | 所有项目的汇总用量 |
-| `GET /daily-usage` | 按天分组的 token 用量 |
+| `GET /presets` | 8 个内置模型的价格 |
+| `GET /session-usage?projectPath=...&sessionId=...` | 单个会话的 token 数 + 模型名 |
+| `POST /calculate` | 给定 token 和价格后的费用明细 |
+| `GET /project-usage?projectPath=...` | 某项目下所有会话汇总 |
+| `GET /all-usage` | 所有项目，按 token 总量降序排列 |
+| `GET /daily-usage` | 所有会话按 `YYYY-MM-DD` 分组 |
 
 ## 开发
 
 ```bash
 npm install
-npm run dev        # watch 模式
-npm run build      # 单次构建
+npm run dev     # tsc --watch
+npm run build   # tsc
 ```
 
-本插件遵循 [CloudCLI 插件架构](https://cloudcli.ai/docs/plugins/plugin-overview)：
-- `manifest.json` 声明插件元数据、入口点和槽位类型
-- `src/index.ts` 导出 `mount(container, api)` 和 `unmount(container)` 生命周期钩子
-- `src/server.ts` 作为 Node.js HTTP 子进程运行，通过 stdout JSON 通知就绪状态
-
-## 许可证
-
-MIT
+MIT.
