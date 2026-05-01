@@ -6,6 +6,9 @@ You're deep into a Claude Code session, hammering out features for hours, and su
 
 Token Cost Calculator is a CloudCLI tab plugin that reads your real Claude Code session transcripts (JSONL files stored locally at `~/.claude/projects/`) and turns raw token counts into dollar amounts. It covers everything — main conversation turns, sub-agent sessions, cached prompt hits, thinking tokens from reasoning models — and gives you per-day, per-project, and all-time breakdowns with zero manual work.
 
+<img width="1468" height="909" alt="image" src="https://github.com/user-attachments/assets/698bb525-fac6-45a0-9e58-9b61b62818cc" />
+
+
 ---
 
 ## What it does (in plain English)
